@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Тапалка ₴2.1</title>
+<style>
+  :root{--bg:#0f1724;--card:#0b1220;--accent:#00c27a;--muted:#9aa4b2;--glass:rgba(255,255,255,0.03);}
+  *{box-sizing:border-box;font-family:Inter, "Segoe UI", Roboto, Arial, sans-serif}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#071021 0%, #071827 60%);color:#e6eef6}
+  .container{max-width:920px;margin:36px auto;padding:24px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6);}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  h1{font-size:20px;margin:0;color:var(--accent)}
+  .sub{color:var(--muted);font-size:13px}
+  .main{display:flex;gap:20px;margin-top:18px;flex-wrap:wrap}
+  .left{flex:1;min-width:260px;background:var(--card);padding:18px;border-radius:12px;position:relative;overflow:hidden}
+  .right{width:320px;min-width:260px;background:var(--card);padding:18px;border-radius:12px}
+  .big-coin{
+    width:100%;height:260px;border-radius:12px;background:linear-gradient(145deg,#12314a,#06202f);
+    display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;
+    user-select:none;box-shadow:inset 0 -8px 24px rgba(0,0,0,0.5), 0 6px 20px rgba(0,0,0,0.6);
+    transition:transform 150ms cubic-bezier(.2,.9,.2,1), box-shadow 150ms;
+    position:relative;overflow:hidden;
+  }
+  .big-coin:active{transform:scale(.97)}
+  .amount{font-size:36px;font-weight:700;margin:6px 0}
+  .per-click{color:var(--muted);font-size:13px}
+  .burst{box-shadow:0 0 20px 6px rgba(0,194,122,0.5)!important;}
+  .float-text{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    color:var(--accent);font-weight:600;pointer-events:none;
+    animation:floatUp 1s ease-out forwards;
+    text-shadow:0 0 6px rgba(0,194,122,0.7);
+  }
+  @keyframes floatUp{
+    0%{opacity:1;transform:translate(-50%,-20%) scale(1);}
+    100%{opacity:0;transform:translate(-50%,-120%) scale(1.3);}
+  }
+  .store h3{margin:0 0 8px 0;color:var(--accent)}
+  .upgrade{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:var(--glass);margin-bottom:10px}
+  .upgrade .meta{display:flex;flex-direction:column}
+  .upgrade .meta strong{font-size:15px}
+  .upgrade small{color:var(--muted)}
+  button.buy{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px;color:var(--accent);cursor:pointer;font-weight:600;}
+  .buy:disabled{opacity:.35;cursor:not-allowed}
+  .footer{display:flex;gap:10px;align-items:center;margin-top:12px}
+  .small-muted{color:var(--muted);font-size:13px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  .btn-secondary{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px 10px;border-radius:8px;color:var(--muted);cursor:pointer}
+  .center{display:flex;align-items:center;justify-content:center}
+  @media (max-width:720px){.main{flex-direction:column}.right{width:100%}}
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Тапалка ₴2.1</h1>
+        <div class="sub">Тепер з ефектом "+₴" при кліку</div>
+      </div>
+      <div class="center"><div class="small-muted">Версія 2.1</div></div>
+    </header>
+
+    <section class="main">
+      <div class="left">
+        <div id="coin" class="big-coin" role="button" tabindex="0">
+          <div style="font-size:14px;color:var(--muted)">Натисни</div>
+          <div id="amount" class="amount">₴0.00</div>
+          <div id="perClick" class="per-click">+₴0.10 за клік</div>
+        </div>
+        <div class="footer" style="margin-top:14px">
+          <div class="small-muted">Загалом: <strong id="totalRaw">0 коп.</strong></div>
+          <div class="controls" style="margin-left:auto">
+            <button id="saveBtn" class="btn-secondary">Зберегти</button>
+            <button id="resetBtn" class="btn-secondary">Скинути</button>
+          </div>
+        </div>
+      </div>
+      <aside class="right">
+        <div class="store">
+          <h3>Магазин апгрейдів</h3>
+          <div id="upgrades"></div>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+<script>
+const SAVE_KEY='tapalka_save_v21';
+let state={total:0,perClick:10,autoAcc:0,
+  upgrades:{power:{level:0,basePrice:5000,type:'click',value:10},
+            auto:{level:0,basePrice:20000,type:'auto',value:50},
+            clickMult:{level:0,basePrice:50000,type:'clickMult',value:2},
+            autoMult:{level:0,basePrice:75000,type:'autoMult',value:2},
+            bonus:{level:0,basePrice:120000,type:'bonus',value:5000}}};
+
+const amountEl=document.getElementById('amount'),
+      perClickEl=document.getElementById('perClick'),
+      totalRawEl=document.getElementById('totalRaw'),
+      upgradesEl=document.getElementById('upgrades'),
+      coinEl=document.getElementById('coin');
+
+function formatUAHFromKop(kop){const g=Math.floor(kop/100),c=String(kop%100).padStart(2,'0');return `₴${g.toLocaleString('uk-UA')}.${c}`;}
+function formatKop(k){return `${k} коп.`;}
+function priceFor(id){const u=state.upgrades[id];return Math.round(u.basePrice*Math.pow(1.25,u.level));}
+function save(){localStorage.setItem(SAVE_KEY,JSON.stringify(state));}
+function load(){const raw=localStorage.getItem(SAVE_KEY);if(raw){state=JSON.parse(raw);}}
+
+// відображення
+function render(){
+  amountEl.textContent=formatUAHFromKop(state.total);
+  perClickEl.textContent=`+${formatUAHFromKop(state.perClick)} за клік`;
+  totalRawEl.textContent=formatKop(state.total);
+  upgradesEl.innerHTML='';
+  const arr=[{id:'power',title:'Підсилення кліку',desc:'+0.10 ₴/рівень'},
+             {id:'auto',title:'Автоклікер',desc:'+0.50 ₴/сек/рівень'},
+             {id:'clickMult',title:'Множник кліку',desc:'×2/рівень'},
+             {id:'autoMult',title:'Множник авто',desc:'×2/рівень'},
+             {id:'bonus',title:'Шанс бонусу',desc:'+50 ₴ іноді'}];
+  arr.forEach(u=>{
+    const up=state.upgrades[u.id];
+    const wrap=document.createElement('div');wrap.className='upgrade';
+    const meta=document.createElement('div');meta.className='meta';
+    meta.innerHTML=`<strong>${u.title}</strong><small>${u.desc}</small><small>Рівень: ${up.level}</small>`;
+    const btn=document.createElement('button');btn.className='buy';btn.textContent=`Купити — ${formatUAHFromKop(priceFor(u.id))}`;
+    if(state.total<priceFor(u.id)) btn.disabled=true;
+    btn.onclick=()=>buyUpgrade(u.id);
+    wrap.append(meta,btn);upgradesEl.appendChild(wrap);
+  });
+}
+
+function buyUpgrade(id){
+  const price=priceFor(id);if(state.total<price)return;
+  state.total-=price;state.upgrades[id].level++;
+  if(id==='power'){state.perClick+=state.upgrades[id].value;}
+  if(id==='clickMult'){state.perClick*=state.upgrades[id].value;}
+  save();render();
+}
+
+// плавне додавання
+let queue=0;
+function addSmooth(amount){queue+=amount;}
+function processQueue(){const step=Math.min(queue,3);if(step>0){state.total+=step;queue-=step;render();}}
+setInterval(processQueue,20);
+
+// автоклік
+let last=Date.now();
+function tickAuto(){
+  const now=Date.now(),dt=(now-last)/1000;last=now;
+  let auto=(state.upgrades.auto.level*state.upgrades.auto.value);
+  if(state.upgrades.autoMult.level>0){auto*=Math.pow(2,state.upgrades.autoMult.level);}
+  addSmooth(Math.floor(auto*dt));
+}
+setInterval(tickAuto,300);
+
+// клік
+function doClick(){
+  let add=state.perClick;
+  if(state.upgrades.clickMult.level>0){add*=Math.pow(2,state.upgrades.clickMult.level);}
+  if(state.upgrades.bonus.level>0 && Math.random()<0.05*state.upgrades.bonus.level){add+=state.upgrades.bonus.value*100;}
+  addSmooth(add);
+  animateTap(add);
+}
+
+function animateTap(amount){
+  coinEl.classList.add('burst');
+  setTimeout(()=>coinEl.classList.remove('burst'),200);
+  // створюємо плаваючий текст
+  const float=document.createElement('div');
+  float.className='float-text';
+  float.textContent=`+${formatUAHFromKop(amount)}`;
+  coinEl.appendChild(float);
+  setTimeout(()=>float.remove(),1000);
+}
+
+coinEl.onclick=doClick;
+document.getElementById('saveBtn').onclick=save;
+document.getElementById('resetBtn').onclick=()=>{if(confirm("Скинути прогрес?")){localStorage.removeItem(SAVE_KEY);location.reload();}};
+window.onbeforeunload=save;
+
+load();render();
+</script>
+</body>
+</html>
