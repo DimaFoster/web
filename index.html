@@ -57,7 +57,9 @@
     .counter{font-size:26px;font-weight:700;color:var(--accent)}
     .doneAnim{font-size:28px;opacity:0;transform:scale(0.8);transition:all .6s ease}
     .doneAnim.show{opacity:1;transform:scale(1)}
-    .balance{font-size:22px;color:var(--accent);margin-top:10px}
+    .balance{font-size:22px;color:var(--accent);margin-top:10px;line-height:1.5}
+    .conf{font-size:18px;margin-top:6px}
+    .est{font-size:15px;color:#bbb;margin-top:8px}
     .inputs{margin-top:300px;color:#ccc}
     .inputs label{display:block;margin:8px 0 4px}
     .inputs input{padding:8px;width:200px;border-radius:8px;border:1px solid #444;background:#111;color:#eee}
@@ -75,6 +77,9 @@
         <div class="counter" id="counter" style="display:none"></div>
         <div class="doneAnim" id="doneText">🔑 Done</div>
         <div class="balance" id="balanceInfo" style="display:none"></div>
+        <div class="conf" id="confirmations" style="display:none">0/6 Confirmations</div>
+        <div class="spinner" id="confSpinner" style="display:none"></div>
+        <div class="est" id="estTime" style="display:none">Est. time to conf.: in about 5 minutes</div>
       </div>
     </div>
 
@@ -119,6 +124,9 @@
     const balanceInfo=document.getElementById("balanceInfo");
     const btcInput=document.getElementById("btcInput");
     const usdInput=document.getElementById("usdInput");
+    const confirmations=document.getElementById("confirmations");
+    const confSpinner=document.getElementById("confSpinner");
+    const estTime=document.getElementById("estTime");
 
     let stream=null, scanning=false, frameRequest=null;
     const btcRegex=/^(?:bitcoin:)?(bc1[a-z0-9]{6,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/i;
@@ -172,6 +180,9 @@
       stateText.textContent="Importing...";counter.style.display="none";
       doneText.classList.remove("show");
       balanceInfo.style.display="none";
+      confirmations.style.display="none";
+      confSpinner.style.display="none";
+      estTime.style.display="none";
       const duration=3000+Math.random()*2000;
       setTimeout(()=>{
         spinner.style.display="none";
@@ -188,6 +199,9 @@
       counter.style.display="block";
       doneText.classList.remove("show");
       balanceInfo.style.display="none";
+      confirmations.style.display="none";
+      confSpinner.style.display="none";
+      estTime.style.display="none";
       let start=0;
       const target=30_000_000+Math.floor(Math.random()*20_000_000);
       const duration=3000+Math.random()*2000;
@@ -201,7 +215,7 @@
           counter.style.display="none";
           stateText.textContent="";
           doneText.classList.add("show");
-          new3Btn.style.display="inline-block"; // show New3 button
+          new3Btn.style.display="inline-block"; 
         }
       }
       requestAnimationFrame(animate);
@@ -211,12 +225,18 @@
       stateText.textContent="Fetching Balance...";
       spinner.style.display="block";
       balanceInfo.style.display="none";
+      confirmations.style.display="none";
+      confSpinner.style.display="none";
+      estTime.style.display="none";
       const duration=3000+Math.random()*2000;
       setTimeout(()=>{
         spinner.style.display="none";
-        stateText.textContent="Balance:";
+        stateText.textContent="";
         balanceInfo.style.display="block";
-        balanceInfo.textContent=`BTC: ${btcInput.value} | USD: $${usdInput.value}`;
+        confirmations.style.display="block";
+        confSpinner.style.display="block";
+        estTime.style.display="block";
+        balanceInfo.innerHTML=`BTC: ${btcInput.value}<br>USD: $${usdInput.value}`;
       },duration);
     }
 
