@@ -1,249 +1,212 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Neon QR Scanner — BTC</title>
+  <meta charset="UTF-8">
+  <title>Neon QR BTC Import</title>
   <style>
-    :root{
-      --bg:#030312;
-      --neon1:#00e6ff;
-      --neon2:#8a00ff;
-      --accent:#00ff9d;
-      --text:#e6f7ff;
+    body {
+      background: #0a0a0a;
+      color: #0ff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      background:var(--bg);
-      color:var(--text);
-      font-family:Inter, sans-serif;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      min-height:100vh;
-      padding:20px;
-      flex-direction:column;
+
+    .scanner {
+      margin: 20px auto;
+      width: 300px;
+      height: 300px;
+      border-radius: 20px;
+      background: #111;
+      box-shadow: 0 0 20px #0ff;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
-    .card{max-width:480px;width:100%;padding:20px;background:rgba(255,255,255,0.03);border-radius:18px}
-    .viewer{position:relative;border-radius:12px;overflow:hidden;background:#000}
-    video{width:100%;height:280px;object-fit:cover}
-    canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-    .overlayState{
-      position:absolute;inset:0;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;gap:14px;
-      background:rgba(3,3,18,0.85);font-size:20px;font-weight:600;
-      visibility:hidden;text-align:center;
+
+    video {
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      object-fit: cover;
     }
-    .overlayState.active{visibility:visible}
-    .spinner{
-      width:100px;height:100px;border:8px solid rgba(255,255,255,0.1);
-      border-top:8px solid var(--neon1);border-radius:50%;animation:spin 1s linear infinite;
+
+    .btn {
+      background: #111;
+      border: 2px solid #0ff;
+      border-radius: 30px;
+      padding: 10px 25px;
+      margin: 15px;
+      font-size: 18px;
+      cursor: pointer;
+      color: #0ff;
+      text-shadow: 0 0 5px #0ff;
+      transition: 0.3s;
     }
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .checkmark{
-      width:100px;height:100px;border-radius:50%;
-      background:linear-gradient(135deg,var(--accent),var(--neon1));
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 0 20px rgba(0,255,160,0.2);font-size:48px;color:#021012
+    .btn:hover {
+      background: #0ff;
+      color: #111;
+      box-shadow: 0 0 15px #0ff;
     }
-    .controls{display:flex;gap:12px;margin-top:14px}
-    button{
-      padding:12px 16px;border-radius:12px;font-size:15px;cursor:pointer;font-weight:600
+
+    .loading-circle {
+      border: 8px solid rgba(0,255,255,0.2);
+      border-top: 8px solid #0ff;
+      border-radius: 50%;
+      width: 100px;
+      height: 100px;
+      animation: spin 1s linear infinite;
+      margin: auto;
     }
-    button.neon{background:linear-gradient(90deg,var(--accent),var(--neon1));color:#021012;border:0}
-    button.ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.2)}
-    .status{margin-left:auto;font-size:13px}
-    .counter{font-size:26px;font-weight:700;color:var(--accent)}
-    .doneAnim{font-size:28px;opacity:0;transform:scale(0.8);transition:all .6s ease}
-    .doneAnim.show{opacity:1;transform:scale(1)}
-    .balance{font-size:22px;color:var(--accent);margin-top:10px;line-height:1.5}
-    .conf{font-size:18px;margin-top:6px}
-    .est{font-size:15px;color:#bbb;margin-top:8px}
-    .inputs{margin-top:300px;color:#ccc}
-    .inputs label{display:block;margin:8px 0 4px}
-    .inputs input{padding:8px;width:200px;border-radius:8px;border:1px solid #444;background:#111;color:#eee}
+
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+
+    .checkmark {
+      font-size: 80px;
+      color: #0f0;
+      text-shadow: 0 0 15px #0f0;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #balanceSection {
+      margin-top: 20px;
+    }
+
+    .spinner-small {
+      border: 4px solid rgba(0,255,255,0.2);
+      border-top: 4px solid #0ff;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+
+    /* Balance fields hidden off-screen */
+    #balanceInputContainer {
+      position: absolute;
+      bottom: -200px;
+      opacity: 0;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="viewer">
-      <video id="video" playsinline muted></video>
-      <canvas id="overlay"></canvas>
-      <div id="stateOverlay" class="overlayState">
-        <div class="spinner" id="spinner"></div>
-        <div class="checkmark" id="check" style="display:none">✔</div>
-        <div id="stateText"></div>
-        <div class="counter" id="counter" style="display:none"></div>
-        <div class="doneAnim" id="doneText">🔑 Done</div>
-        <div class="balance" id="balanceInfo" style="display:none"></div>
-        <div class="conf" id="confirmations" style="display:none">0/6 Confirmations</div>
-        <div class="spinner" id="confSpinner" style="display:none"></div>
-        <div class="est" id="estTime" style="display:none">Est. time to conf.: in about 5 minutes</div>
-      </div>
-    </div>
+  <h1>Neon BTC QR Import</h1>
 
-    <div class="controls">
-      <button id="scanBtn" class="neon">Scan QR</button>
-      <button id="stopBtn" class="ghost" disabled>Stop</button>
-      <button id="new1Btn" class="ghost" style="display:none">New1</button>
-      <button id="new3Btn" class="ghost" style="display:none">New3</button>
-      <div class="status" id="status">Ready</div>
-    </div>
-
-    <div class="result">BTC Address: <span id="addr">None yet</span></div>
-    <div id="error" class="error" hidden></div>
+  <div class="scanner" id="scanner">
+    <video id="video" autoplay></video>
+    <div id="loading" class="hidden"></div>
+    <div id="result" class="hidden"></div>
   </div>
 
-  <!-- Hidden balance inputs -->
-  <div class="inputs">
-    <label for="btcInput">BTC Balance:</label>
-    <input id="btcInput" type="text" value="0.123456" />
-    <label for="usdInput">USD Balance:</label>
-    <input id="usdInput" type="text" value="7500" />
+  <button id="scanBtn" class="btn">Scan</button>
+  <button id="new1Btn" class="btn hidden">New1</button>
+  <button id="new3Btn" class="btn hidden">New3</button>
+
+  <div id="balanceSection" class="hidden">
+    <div id="btcLine"></div>
+    <div id="usdLine"></div>
+    <div id="confLine">0/6 Confirmations</div>
+    <div id="spinnerLine"><span class="spinner-small"></span>Est. time to conf.: in about 5 minutes</div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <!-- Hidden inputs for balance -->
+  <div id="balanceInputContainer">
+    <label>BTC Balance: <input type="text" id="btcBalance" value="0.12345678"></label><br>
+    <label>USD Balance: <input type="text" id="usdBalance" value="6543.21"></label>
+  </div>
+
   <script>
-    const video=document.getElementById("video");
-    const overlay=document.getElementById("overlay");
-    const ctx=overlay.getContext("2d");
-    const scanBtn=document.getElementById("scanBtn");
-    const stopBtn=document.getElementById("stopBtn");
-    const new1Btn=document.getElementById("new1Btn");
-    const new3Btn=document.getElementById("new3Btn");
-    const statusEl=document.getElementById("status");
-    const addrEl=document.getElementById("addr");
-    const errorEl=document.getElementById("error");
-    const stateOverlay=document.getElementById("stateOverlay");
-    const spinner=document.getElementById("spinner");
-    const check=document.getElementById("check");
-    const stateText=document.getElementById("stateText");
-    const counter=document.getElementById("counter");
-    const doneText=document.getElementById("doneText");
-    const balanceInfo=document.getElementById("balanceInfo");
-    const btcInput=document.getElementById("btcInput");
-    const usdInput=document.getElementById("usdInput");
-    const confirmations=document.getElementById("confirmations");
-    const confSpinner=document.getElementById("confSpinner");
-    const estTime=document.getElementById("estTime");
+    const video = document.getElementById('video');
+    const scanner = document.getElementById('scanner');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    const scanBtn = document.getElementById('scanBtn');
+    const new1Btn = document.getElementById('new1Btn');
+    const new3Btn = document.getElementById('new3Btn');
+    const balanceSection = document.getElementById('balanceSection');
 
-    let stream=null, scanning=false, frameRequest=null;
-    const btcRegex=/^(?:bitcoin:)?(bc1[a-z0-9]{6,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/i;
+    let scanned = false;
 
-    function stopCamera(){
-      scanning=false;scanBtn.disabled=false;stopBtn.disabled=true;
-      if(frameRequest)cancelAnimationFrame(frameRequest);
-      if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
-      video.srcObject=null;ctx.clearRect(0,0,overlay.width,overlay.height);
-      setStatus("Stopped");
-    }
-    function setStatus(s){statusEl.textContent=s;}
-    function processResult(text){
-      if(!text)return false;
-      const clean=text.trim().split(/[\s?#]/)[0];
-      const m=clean.match(btcRegex);
-      if(m){
-        addrEl.textContent=m[1];
-        setStatus("BTC found");
-        showLoadingThenSuccess();
-        return true;
+    scanBtn.addEventListener('click', async () => {
+      if (!scanned) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = stream;
+        // Симуляція сканування + затримка 1с
+        setTimeout(() => {
+          setTimeout(() => { // ще затримка перед результатом
+            video.classList.add('hidden');
+            loading.classList.remove('hidden');
+            loading.innerHTML = '<div class="loading-circle"></div>';
+            setTimeout(() => {
+              loading.classList.add('hidden');
+              result.classList.remove('hidden');
+              result.innerHTML = '<div class="checkmark">✔</div><p>Imported</p>';
+              scanBtn.textContent = "Scan New";
+              new1Btn.classList.remove('hidden');
+              scanned = true;
+            }, 3000 + Math.random() * 2000);
+          }, 1000); // затримка визначення
+        }, 1500);
+      } else {
+        // Reset
+        video.classList.remove('hidden');
+        result.classList.add('hidden');
+        loading.innerHTML = '';
+        new1Btn.classList.add('hidden');
+        new3Btn.classList.add('hidden');
+        balanceSection.classList.add('hidden');
+        scanned = false;
+        scanBtn.textContent = "Scan";
       }
-      return false;
-    }
-    function scanFrame(){
-      if(!scanning)return;
-      if(video.readyState!==video.HAVE_ENOUGH_DATA){
-        frameRequest=requestAnimationFrame(scanFrame);return;
-      }
-      overlay.width=video.videoWidth;overlay.height=video.videoHeight;
-      ctx.drawImage(video,0,0,overlay.width,overlay.height);
-      const img=ctx.getImageData(0,0,overlay.width,overlay.height);
-      const code=jsQR(img.data,img.width,img.height);
-      if(code){if(processResult(code.data))return;}
-      frameRequest=requestAnimationFrame(scanFrame);
-    }
-    async function startScan(){
-      errorEl.hidden=true;addrEl.textContent="None yet";
-      scanBtn.disabled=true;stopBtn.disabled=false;
-      setStatus("Starting camera...");
-      try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});}
-      catch(e){errorEl.hidden=false;errorEl.textContent="Camera blocked.";return;}
-      video.srcObject=stream;await video.play();
-      scanning=true;setStatus("Scanning...");
-      frameRequest=requestAnimationFrame(scanFrame);
-    }
-    function showLoadingThenSuccess(){
-      stopCamera();
-      stateOverlay.classList.add("active");
-      spinner.style.display="block";check.style.display="none";
-      stateText.textContent="Importing...";counter.style.display="none";
-      doneText.classList.remove("show");
-      balanceInfo.style.display="none";
-      confirmations.style.display="none";
-      confSpinner.style.display="none";
-      estTime.style.display="none";
-      const duration=3000+Math.random()*2000;
-      setTimeout(()=>{
-        spinner.style.display="none";
-        check.style.display="flex";
-        stateText.textContent="Imported";
-        scanBtn.textContent="Scan New";
-        stopBtn.style.display="none";
-        new1Btn.style.display="inline-block";
-      },duration);
-    }
-    function runNew1Sequence(){
-      check.style.display="none";
-      stateText.textContent="Loading:";
-      counter.style.display="block";
-      doneText.classList.remove("show");
-      balanceInfo.style.display="none";
-      confirmations.style.display="none";
-      confSpinner.style.display="none";
-      estTime.style.display="none";
-      let start=0;
-      const target=30_000_000+Math.floor(Math.random()*20_000_000);
-      const duration=3000+Math.random()*2000;
-      const startTime=performance.now();
-      function animate(t){
-        const progress=Math.min((t-startTime)/duration,1);
-        const val=Math.floor(target*progress);
-        counter.textContent=val.toLocaleString();
-        if(progress<1){requestAnimationFrame(animate);}
-        else{
-          counter.style.display="none";
-          stateText.textContent="";
-          doneText.classList.add("show");
-          new3Btn.style.display="inline-block"; 
+    });
+
+    new1Btn.addEventListener('click', () => {
+      result.innerHTML = "<p>Loading:</p><p id='counter'>0</p>";
+      new1Btn.classList.add('hidden');
+      let counter = document.getElementById('counter');
+      let value = 0;
+      let target = 30_000_000 + Math.floor(Math.random() * 20_000_000);
+      let duration = 3000 + Math.random() * 2000;
+      let start = performance.now();
+
+      function animate(now) {
+        let progress = (now - start) / duration;
+        if (progress > 1) progress = 1;
+        value = Math.floor(target * progress);
+        counter.textContent = value.toLocaleString();
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          result.innerHTML = "<div class='checkmark'>🔑</div><p>Done</p>";
+          new3Btn.classList.remove('hidden');
         }
       }
       requestAnimationFrame(animate);
-    }
-    function runNew3Sequence(){
-      doneText.classList.remove("show");
-      stateText.textContent="Fetching Balance...";
-      spinner.style.display="block";
-      balanceInfo.style.display="none";
-      confirmations.style.display="none";
-      confSpinner.style.display="none";
-      estTime.style.display="none";
-      const duration=3000+Math.random()*2000;
-      setTimeout(()=>{
-        spinner.style.display="none";
-        stateText.textContent="";
-        balanceInfo.style.display="block";
-        confirmations.style.display="block";
-        confSpinner.style.display="block";
-        estTime.style.display="block";
-        balanceInfo.innerHTML=`BTC: ${btcInput.value}<br>USD: $${usdInput.value}`;
-      },duration);
-    }
+    });
 
-    scanBtn.addEventListener("click",startScan);
-    stopBtn.addEventListener("click",stopCamera);
-    new1Btn.addEventListener("click",runNew1Sequence);
-    new3Btn.addEventListener("click",runNew3Sequence);
+    new3Btn.addEventListener('click', () => {
+      result.innerHTML = '<div class="loading-circle"></div>';
+      new3Btn.classList.add('hidden');
+      setTimeout(() => {
+        const btc = document.getElementById('btcBalance').value;
+        const usd = document.getElementById('usdBalance').value;
+        result.innerHTML = '';
+        balanceSection.classList.remove('hidden');
+        document.getElementById('btcLine').textContent = `BTC Balance: ${btc}`;
+        document.getElementById('usdLine').textContent = `USD Balance: $${usd}`;
+      }, 3000 + Math.random() * 2000);
+    });
   </script>
 </body>
 </html>
