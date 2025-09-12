@@ -1,10 +1,9 @@
 <!doctype html>
-<html lang="uk">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
-  <title>Неоновий QR-сканер — BTC адреса</title>
-  <link rel="icon" href="data:," />
+  <title>Neon QR Scanner — BTC Address</title>
   <style>
     :root{
       --bg:#030312;
@@ -17,37 +16,25 @@
       --radius:18px;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
     body{
       margin:0;
-      background:
-        radial-gradient(1200px 800px at 10% 10%, rgba(138,0,255,0.06), transparent 10%),
-        radial-gradient(900px 500px at 90% 90%, rgba(0,230,255,0.04), transparent 8%),
-        var(--bg);
+      background:var(--bg);
       color:var(--text);
-      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
-      -webkit-font-smoothing:antialiased;
+      font-family: Inter, "Segoe UI", sans-serif;
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:24px;
+      min-height:100vh;
+      padding:20px;
     }
-
     .card{
       width:100%;
       max-width:480px;
       background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border-radius:calc(var(--radius) + 6px);
+      border-radius:var(--radius);
       padding:20px;
-      box-shadow:
-        0 6px 30px rgba(0,0,0,0.6),
-        0 0 18px rgba(138,0,255,0.08),
-        0 0 40px rgba(0,230,255,0.04);
-      border: 1px solid rgba(255,255,255,0.04);
-      position:relative;
-      overflow:hidden;
+      box-shadow:0 6px 30px rgba(0,0,0,0.6), 0 0 18px rgba(138,0,255,0.08);
     }
-
     .title{
       display:flex;
       gap:12px;
@@ -55,383 +42,219 @@
       margin-bottom:14px;
     }
     .logo{
-      width:46px;
-      height:46px;
+      width:46px;height:46px;
       background:linear-gradient(135deg,var(--neon1), var(--neon2));
       border-radius:12px;
-      display:grid;
-      place-items:center;
-      color:#021012;
-      font-weight:700;
-      box-shadow: 0 6px 30px rgba(138,0,255,0.12), 0 0 10px rgba(0,230,255,0.08);
-      border:1px solid rgba(255,255,255,0.06);
+      display:grid;place-items:center;
+      font-weight:700;color:#021012;
     }
-    h1{
-      font-size:18px;
-      margin:0;
-      letter-spacing:0.2px;
-    }
-    p.sub{
-      margin:6px 0 16px 0;
-      font-size:13px;
-      color:rgba(230,247,255,0.8);
-    }
+    h1{font-size:18px;margin:0}
+    p.sub{margin:6px 0 16px 0;font-size:13px;color:rgba(230,247,255,0.8)}
 
     .viewer{
-      border-radius:calc(var(--radius) - 6px);
+      position:relative;
+      border-radius:12px;
       overflow:hidden;
       background:var(--glass);
-      border: 1px solid rgba(255,255,255,0.02);
-      position:relative;
     }
     video#video{
       width:100%;
-      height:320px;
+      height:300px;
       object-fit:cover;
+      background:#000;
       display:block;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.1));
     }
     canvas#overlay{
       position:absolute;
       inset:0;
-      width:100%;
-      height:100%;
+      width:100%;height:100%;
       pointer-events:none;
     }
 
-    .controls{
+    /* Overlay states (loading, success) */
+    .overlayState{
+      position:absolute;
+      inset:0;
       display:flex;
-      gap:12px;
-      margin-top:14px;
       align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      background:rgba(3,3,18,0.85);
+      color:var(--text);
+      font-size:20px;
+      font-weight:600;
+      gap:14px;
+      visibility:hidden;
     }
+    .overlayState.active{ visibility:visible; }
+
+    .spinner{
+      width:100px;height:100px;
+      border:8px solid rgba(255,255,255,0.1);
+      border-top:8px solid var(--neon1);
+      border-radius:50%;
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin{ to{ transform:rotate(360deg);} }
+
+    .checkmark{
+      width:100px;height:100px;
+      border-radius:50%;
+      background:linear-gradient(135deg,var(--accent), var(--neon1));
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 0 20px rgba(0,255,160,0.2);
+    }
+    .checkmark::after{
+      content:"✔";
+      font-size:48px;
+      color:#021012;
+      font-weight:900;
+    }
+
+    .controls{display:flex;gap:12px;margin-top:14px}
     button.neon{
-      appearance:none;
       border:0;
       padding:12px 16px;
       border-radius:12px;
       font-size:15px;
       cursor:pointer;
-      color:#021012;
       background:linear-gradient(90deg,var(--accent), var(--neon1));
-      box-shadow: 0 6px 30px rgba(0,255,160,0.08), 0 0 18px rgba(0,230,255,0.06);
-      transition: transform .12s ease, box-shadow .12s;
+      color:#021012;font-weight:600;
     }
-    button.neon:active{ transform:translateY(2px) }
     button.ghost{
       background:transparent;
       color:var(--text);
-      border:1px solid rgba(255,255,255,0.06);
-      padding:10px 12px;
-    }
-
-    .status{
-      margin-left:auto;
-      font-size:13px;
-      color:rgba(230,247,255,0.9);
-    }
-
-    .result{
-      margin-top:14px;
-      padding:12px;
+      border:1px solid rgba(255,255,255,0.1);
+      padding:10px 14px;
       border-radius:12px;
-      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
-      border:1px solid rgba(255,255,255,0.03);
-      font-family:monospace;
-      word-break:break-all;
-      font-size:13px;
-      min-height:46px;
-      display:flex;
-      align-items:center;
-      gap:10px;
     }
-    .result .addr{
-      flex:1;
-      color:var(--text);
-    }
-    .result .badge{
-      padding:6px 8px;
-      border-radius:10px;
-      background:linear-gradient(90deg,var(--neon2), var(--neon1));
-      color:#021012;
-      font-weight:700;
-      font-size:12px;
-    }
-    .hint{
-      margin-top:10px;
-      font-size:12px;
-      color:rgba(230,247,255,0.65);
-    }
-
-    .error{
-      color:var(--danger);
-      font-weight:600;
-      margin-top:12px;
-    }
-
-    /* small screens */
-    @media (max-width:420px){
-      video#video{ height:240px }
-      .card{ padding:16px }
-    }
+    .status{margin-left:auto;font-size:13px}
+    .result{margin-top:12px;font-family:monospace;font-size:13px}
+    .error{color:var(--danger);margin-top:12px;font-weight:600}
   </style>
 </head>
 <body>
-  <div class="card" role="application" aria-labelledby="title">
+  <div class="card">
     <div class="title">
       <div class="logo">QR</div>
       <div>
-        <h1 id="title">Неоновий QR-сканер — BTC</h1>
-        <p class="sub">Натисни «Сканувати» і направ телефон на QR. Ми виявимо Bitcoin-адресу.</p>
+        <h1>Neon QR Scanner — BTC</h1>
+        <p class="sub">Tap "Scan" and point your camera at a QR code. We'll detect a Bitcoin address.</p>
       </div>
     </div>
 
-    <div class="viewer" aria-hidden="false">
+    <div class="viewer">
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
+
+      <!-- Overlay for loading / success -->
+      <div id="stateOverlay" class="overlayState">
+        <div class="spinner" id="spinner"></div>
+        <div class="checkmark" id="check" style="display:none"></div>
+        <div id="stateText"></div>
+      </div>
     </div>
 
-    <div class="controls" >
-      <button id="scanBtn" class="neon">Сканувати QR</button>
-      <button id="stopBtn" class="ghost" disabled>Зупинити</button>
-      <div class="status" id="status">Готово</div>
+    <div class="controls">
+      <button id="scanBtn" class="neon">Scan QR</button>
+      <button id="stopBtn" class="ghost" disabled>Stop</button>
+      <div class="status" id="status">Ready</div>
     </div>
 
-    <div class="result" id="result" aria-live="polite">
-      <div class="addr" id="addr">Тут з'явиться знайдена BTC-адреса</div>
-      <div class="badge" id="badge">BTC</div>
-    </div>
-
-    <div class="hint">Підтримуються формати типу <code>bitcoin:...</code>, та звичайні адреси <code>1...</code>, <code>3...</code>, <code>bc1...</code>.</div>
-    <div id="error" class="error" role="alert" hidden></div>
+    <div class="result" id="result">BTC Address: <span id="addr">None yet</span></div>
+    <div id="error" class="error" hidden></div>
   </div>
 
-  <!-- jsQR fallback для старих браузерів -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-
   <script>
-    // Елементи інтерфейсу
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
+    const ctx = overlay.getContext('2d');
     const scanBtn = document.getElementById('scanBtn');
     const stopBtn = document.getElementById('stopBtn');
     const statusEl = document.getElementById('status');
     const addrEl = document.getElementById('addr');
     const errorEl = document.getElementById('error');
-    const canvas = overlay;
-    const ctx = canvas.getContext('2d');
+    const stateOverlay = document.getElementById('stateOverlay');
+    const spinner = document.getElementById('spinner');
+    const check = document.getElementById('check');
+    const stateText = document.getElementById('stateText');
 
-    let stream = null;
-    let scanning = false;
-    let frameRequest = null;
-    let barcodeDetector = null;
+    let stream=null, scanning=false, frameRequest=null;
 
-    // Регекс для BTC адреси або bitcoin: URI (достатньо грубо, але практично)
     const btcRegex = /^(?:bitcoin:)?(bc1[a-z0-9]{6,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/i;
 
-    function setStatus(s){
-      statusEl.textContent = s;
-    }
-    function showError(msg){
-      errorEl.hidden = false;
-      errorEl.textContent = msg;
-      setTimeout(()=>{ errorEl.hidden = true }, 6000);
-    }
-    function setAddress(addr){
-      addrEl.textContent = addr || 'Тут з\'явиться знайдена BTC-адреса';
-    }
-
-    // Зупинка камери
     function stopCamera(){
-      scanning = false;
-      scanBtn.disabled = false;
-      stopBtn.disabled = true;
-      setStatus('Зупинено');
-      if(frameRequest) { cancelAnimationFrame(frameRequest); frameRequest = null; }
-      if(stream){
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
-      }
-      video.srcObject = null;
-      // Очистити canvas
-      ctx.clearRect(0,0,canvas.width, canvas.height);
+      scanning=false;
+      scanBtn.disabled=false;
+      stopBtn.disabled=true;
+      if(frameRequest) cancelAnimationFrame(frameRequest);
+      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+      video.srcObject=null;
+      ctx.clearRect(0,0,overlay.width,overlay.height);
+      setStatus("Stopped");
     }
+    function setStatus(s){ statusEl.textContent=s; }
 
-    // Обробка результату (пробуємо знайти BTC)
     function processResult(text){
       if(!text) return false;
-      const possible = text.trim();
-      // Якщо містить URI з параметрами, виріжемо до першого знаку ? або # чи пробілу
-      const clean = possible.split(/[\\s?#]/)[0];
-      const m = clean.match(btcRegex);
+      const clean=text.trim().split(/[\s?#]/)[0];
+      const m=clean.match(btcRegex);
       if(m){
-        const addr = m[1];
-        setAddress(addr);
-        setStatus('BTC-адреса знайдена');
-        // зупиняємось після успіху
-        stopCamera();
+        addrEl.textContent=m[1];
+        setStatus("BTC Address found");
+        showLoadingThenSuccess();
         return true;
-      } else {
-        // не BTC — показати тимчасово
-        setStatus('QR знайдений, але він не виглядає як BTC-адреса');
-        setAddress(clean);
-        return false;
-      }
-    }
-
-    // Рамка навколо знайденого QR
-    function drawBounding(box, color='lime') {
-      if(!box) return;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(box.topLeftCorner.x, box.topLeftCorner.y);
-      ctx.lineTo(box.topRightCorner.x, box.topRightCorner.y);
-      ctx.lineTo(box.bottomRightCorner.x, box.bottomRightCorner.y);
-      ctx.lineTo(box.bottomLeftCorner.x, box.bottomLeftCorner.y);
-      ctx.closePath();
-      ctx.stroke();
-    }
-
-    // Фрейм-скан через jsQR
-    function scanFrameWithJsQR(){
-      if(!scanning) return;
-      if(video.readyState !== video.HAVE_ENOUGH_DATA){
-        frameRequest = requestAnimationFrame(scanFrameWithJsQR);
-        return;
-      }
-      // розмір canvas під відео
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0,0,canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
-      ctx.clearRect(0,0,canvas.width, canvas.height);
-      if(code){
-        // jsQR дає corners
-        drawBounding({
-          topLeftCorner: {x: code.location.topLeftCorner.x, y: code.location.topLeftCorner.y},
-          topRightCorner: {x: code.location.topRightCorner.x, y: code.location.topRightCorner.y},
-          bottomRightCorner: {x: code.location.bottomRightCorner.x, y: code.location.bottomRightCorner.y},
-          bottomLeftCorner: {x: code.location.bottomLeftCorner.x, y: code.location.bottomLeftCorner.y},
-        }, 'rgba(0,230,255,0.9)');
-        if(processResult(code.data)) return;
-      } else {
-        setStatus('Сканую...');
-      }
-      frameRequest = requestAnimationFrame(scanFrameWithJsQR);
-    }
-
-    // Використання BarcodeDetector (сучасні Chromium-based браузери)
-    async function initBarcodeDetector(){
-      if('BarcodeDetector' in window){
-        try{
-          const supported = await BarcodeDetector.getSupportedFormats();
-          // підтримуєм QR?
-          if(supported.includes('qr_code')){
-            barcodeDetector = new BarcodeDetector({formats: ['qr_code']});
-            console.info('Використовуємо BarcodeDetector API');
-            return true;
-          }
-        }catch(e){
-          console.warn('BarcodeDetector init failed', e);
-        }
       }
       return false;
     }
 
-    // Скан за допомогою BarcodeDetector
-    async function scanWithBarcodeDetector(){
-      if(!scanning || !barcodeDetector) return;
-      try{
-        const detections = await barcodeDetector.detect(video);
-        ctx.clearRect(0,0,canvas.width, canvas.height);
-        if(detections && detections.length){
-          for(const d of detections){
-            // d.rawValue
-            // і boundingBox (x,y,width,height) або cornerPoints
-            if(d.cornerPoints){
-              drawBounding({
-                topLeftCorner: {x:d.cornerPoints[0].x, y:d.cornerPoints[0].y},
-                topRightCorner: {x:d.cornerPoints[1].x, y:d.cornerPoints[1].y},
-                bottomRightCorner: {x:d.cornerPoints[2].x, y:d.cornerPoints[2].y},
-                bottomLeftCorner: {x:d.cornerPoints[3].x, y:d.cornerPoints[3].y},
-              }, 'rgba(138,0,255,0.9)');
-            } else if(d.boundingBox){
-              const b = d.boundingBox;
-              ctx.strokeStyle = 'rgba(138,0,255,0.9)';
-              ctx.lineWidth = 3;
-              ctx.strokeRect(b.x, b.y, b.width, b.height);
-            }
-            if(processResult(d.rawValue)) return;
-          }
-        } else {
-          setStatus('Сканую...');
-        }
-      }catch(err){
-        // якщо BarcodeDetector кинув помилку — fallback
-        console.warn('BarcodeDetector error:', err);
-        barcodeDetector = null;
-        scanFrameWithJsQR();
-        return;
+    function scanFrame(){
+      if(!scanning) return;
+      if(video.readyState!==video.HAVE_ENOUGH_DATA){
+        frameRequest=requestAnimationFrame(scanFrame);return;
       }
-      frameRequest = requestAnimationFrame(scanWithBarcodeDetector);
+      overlay.width=video.videoWidth;
+      overlay.height=video.videoHeight;
+      ctx.drawImage(video,0,0,overlay.width,overlay.height);
+      const imageData=ctx.getImageData(0,0,overlay.width,overlay.height);
+      const code=jsQR(imageData.data,imageData.width,imageData.height);
+      if(code){
+        if(processResult(code.data)) return;
+      }
+      frameRequest=requestAnimationFrame(scanFrame);
     }
 
-    // Почати сканування
     async function startScan(){
-      errorEl.hidden = true;
-      setAddress('');
-      setStatus('Запускаємо камеру...');
-      scanBtn.disabled = true;
-      stopBtn.disabled = false;
-      scanning = true;
-
-      // запросимо права на камеру (переважно задня камера)
+      errorEl.hidden=true;
+      addrEl.textContent="None yet";
+      scanBtn.disabled=true; stopBtn.disabled=false;
+      setStatus("Starting camera...");
       try{
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
-      } catch(err){
-        console.error(err);
-        showError('Не вдалося отримати доступ до камери. Перевір дозволи або спробуй інший браузер.');
-        stopCamera();
-        return;
-      }
-
-      video.srcObject = stream;
-      await video.play();
-
-      // підлаштувати canvas під розміри відео
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      // Якщо доступний BarcodeDetector — використовуємо його
-      const bd = await initBarcodeDetector();
-      if(bd && barcodeDetector){
-        setStatus('Сканую (BarcodeDetector)...');
-        frameRequest = requestAnimationFrame(scanWithBarcodeDetector);
-      } else {
-        setStatus('Сканую (jsQR)...');
-        frameRequest = requestAnimationFrame(scanFrameWithJsQR);
-      }
+        stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+      }catch(e){ errorEl.hidden=false; errorEl.textContent="Camera access denied."; return; }
+      video.srcObject=stream; await video.play();
+      scanning=true;
+      setStatus("Scanning...");
+      frameRequest=requestAnimationFrame(scanFrame);
     }
 
-    // Події кнопок
-    scanBtn.addEventListener('click', () => {
-      if(scanning) return;
-      startScan();
-    });
-    stopBtn.addEventListener('click', () => stopCamera());
+    function showLoadingThenSuccess(){
+      stopCamera();
+      stateOverlay.classList.add("active");
+      spinner.style.display="block";
+      check.style.display="none";
+      stateText.textContent="Importing...";
+      const duration=3000+Math.random()*2000; // 3–5s
+      setTimeout(()=>{
+        spinner.style.display="none";
+        check.style.display="flex";
+        stateText.textContent="Imported";
+      },duration);
+    }
 
-    // Очищення коли вікно закривається
-    window.addEventListener('pagehide', stopCamera);
-    window.addEventListener('beforeunload', stopCamera);
+    scanBtn.addEventListener("click",startScan);
+    stopBtn.addEventListener("click",stopCamera);
   </script>
 </body>
 </html>
