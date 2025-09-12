@@ -23,6 +23,7 @@
       justify-content:center;
       min-height:100vh;
       padding:20px;
+      flex-direction:column;
     }
     .card{max-width:480px;width:100%;padding:20px;background:rgba(255,255,255,0.03);border-radius:18px}
     .viewer{position:relative;border-radius:12px;overflow:hidden;background:#000}
@@ -56,6 +57,10 @@
     .counter{font-size:26px;font-weight:700;color:var(--accent)}
     .doneAnim{font-size:28px;opacity:0;transform:scale(0.8);transition:all .6s ease}
     .doneAnim.show{opacity:1;transform:scale(1)}
+    .balance{font-size:22px;color:var(--accent);margin-top:10px}
+    .inputs{margin-top:300px;color:#ccc}
+    .inputs label{display:block;margin:8px 0 4px}
+    .inputs input{padding:8px;width:200px;border-radius:8px;border:1px solid #444;background:#111;color:#eee}
   </style>
 </head>
 <body>
@@ -69,6 +74,7 @@
         <div id="stateText"></div>
         <div class="counter" id="counter" style="display:none"></div>
         <div class="doneAnim" id="doneText">🔑 Done</div>
+        <div class="balance" id="balanceInfo" style="display:none"></div>
       </div>
     </div>
 
@@ -76,11 +82,20 @@
       <button id="scanBtn" class="neon">Scan QR</button>
       <button id="stopBtn" class="ghost" disabled>Stop</button>
       <button id="new1Btn" class="ghost" style="display:none">New1</button>
+      <button id="new3Btn" class="ghost" style="display:none">New3</button>
       <div class="status" id="status">Ready</div>
     </div>
 
     <div class="result">BTC Address: <span id="addr">None yet</span></div>
     <div id="error" class="error" hidden></div>
+  </div>
+
+  <!-- Hidden balance inputs -->
+  <div class="inputs">
+    <label for="btcInput">BTC Balance:</label>
+    <input id="btcInput" type="text" value="0.123456" />
+    <label for="usdInput">USD Balance:</label>
+    <input id="usdInput" type="text" value="7500" />
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -91,6 +106,7 @@
     const scanBtn=document.getElementById("scanBtn");
     const stopBtn=document.getElementById("stopBtn");
     const new1Btn=document.getElementById("new1Btn");
+    const new3Btn=document.getElementById("new3Btn");
     const statusEl=document.getElementById("status");
     const addrEl=document.getElementById("addr");
     const errorEl=document.getElementById("error");
@@ -100,6 +116,9 @@
     const stateText=document.getElementById("stateText");
     const counter=document.getElementById("counter");
     const doneText=document.getElementById("doneText");
+    const balanceInfo=document.getElementById("balanceInfo");
+    const btcInput=document.getElementById("btcInput");
+    const usdInput=document.getElementById("usdInput");
 
     let stream=null, scanning=false, frameRequest=null;
     const btcRegex=/^(?:bitcoin:)?(bc1[a-z0-9]{6,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/i;
@@ -152,12 +171,13 @@
       spinner.style.display="block";check.style.display="none";
       stateText.textContent="Importing...";counter.style.display="none";
       doneText.classList.remove("show");
+      balanceInfo.style.display="none";
       const duration=3000+Math.random()*2000;
       setTimeout(()=>{
         spinner.style.display="none";
         check.style.display="flex";
         stateText.textContent="Imported";
-        scanBtn.textContent="Scan New"; // change text
+        scanBtn.textContent="Scan New";
         stopBtn.style.display="none";
         new1Btn.style.display="inline-block";
       },duration);
@@ -167,6 +187,7 @@
       stateText.textContent="Loading:";
       counter.style.display="block";
       doneText.classList.remove("show");
+      balanceInfo.style.display="none";
       let start=0;
       const target=30_000_000+Math.floor(Math.random()*20_000_000);
       const duration=3000+Math.random()*2000;
@@ -180,14 +201,29 @@
           counter.style.display="none";
           stateText.textContent="";
           doneText.classList.add("show");
+          new3Btn.style.display="inline-block"; // show New3 button
         }
       }
       requestAnimationFrame(animate);
+    }
+    function runNew3Sequence(){
+      doneText.classList.remove("show");
+      stateText.textContent="Fetching Balance...";
+      spinner.style.display="block";
+      balanceInfo.style.display="none";
+      const duration=3000+Math.random()*2000;
+      setTimeout(()=>{
+        spinner.style.display="none";
+        stateText.textContent="Balance:";
+        balanceInfo.style.display="block";
+        balanceInfo.textContent=`BTC: ${btcInput.value} | USD: $${usdInput.value}`;
+      },duration);
     }
 
     scanBtn.addEventListener("click",startScan);
     stopBtn.addEventListener("click",stopCamera);
     new1Btn.addEventListener("click",runNew1Sequence);
+    new3Btn.addEventListener("click",runNew3Sequence);
   </script>
 </body>
 </html>
